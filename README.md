@@ -1,36 +1,60 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Run Path Finder
 
-## Getting Started
+A web application that helps runners find and plan their running routes. The app generates circular routes based on a starting location and desired distance, with options for elevation preferences.
 
-First, run the development server:
+## Features
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+- Generate running routes based on start location and distance
+- Choose between kilometers and miles
+- Option to prefer flatter routes
+- View route details including distance and elevation gain
+- Export routes as GPX files for use in other apps
+- Save favorite routes for future reference
+- Interactive map display
+- Multiple route suggestions for each search
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Prerequisites
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- Node.js 18 or higher
+- npm or yarn
+- OpenRouteService API key (free tier available)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Setup
 
-## Learn More
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/yourusername/run-path-finder.git
+   cd run-path-finder
+   ```
 
-To learn more about Next.js, take a look at the following resources:
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+3. Create a `.env.local` file in the root directory with your OpenRouteService API key:
+   ```
+   NEXT_PUBLIC_ORS_API_KEY=your_api_key_here
+   ```
+   Get your API key from [OpenRouteService](https://openrouteservice.org/)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+4. Start the development server:
+   ```bash
+   npm run dev
+   ```
 
-## Deploy on Vercel
+5. Open [http://localhost:3000](http://localhost:3000) in your browser
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Technologies Used
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Next.js 14
+- React
+- JavaScript
+- Tailwind CSS
+- Leaflet for maps
+- OpenRouteService API for route generation
+- OpenStreetMap for location search
+
+## License
+
+MIT
