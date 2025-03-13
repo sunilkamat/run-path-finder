@@ -49,13 +49,11 @@ export async function POST(request) {
         throw new Error('Distance must be a positive number');
       }
 
-      // Cap the maximum distance to prevent issues
-      const maxDistance = 20; // 20km maximum
+      const maxDistance = 30;
       const adjustedDistance = Math.min(distance, maxDistance);
 
       const routeVariations = generateRouteVariations([longitude, latitude], adjustedDistance);
-      const allRoutes = [];
-      let routeCounter = 0;
+      const validRoutes = [];
 
       for (const { waypoints, pattern } of routeVariations) {
         try {
@@ -70,8 +68,18 @@ export async function POST(request) {
             },
             body: JSON.stringify({
               coordinates: waypoints,
-              instructions: false,
-              preference: 'shortest'
+              instructions: true,
+              elevation: true,
+              preference: 'recommended',
+              options: {
+                "avoid_features": ["steps"],
+                "profile_params": {
+                  "weightings": {
+                    "green": 0.5,
+                    "quiet": 0.3
+                  }
+                }
+              }
             })
           });
 
@@ -83,10 +91,33 @@ export async function POST(request) {
 
           const routeData = await response.json();
           if (routeData.features && routeData.features.length > 0) {
-            routeCounter++;
-            const route = transformRouteData(routeData, routeCounter, pattern.name)[0];
-            if (Math.abs(route.distance - adjustedDistance) <= adjustedDistance * 0.5) {
-              allRoutes.push(route);
+            const route = transformRouteData(routeData)[0];
+            
+            // Check if it's a proper loop (start and end points are close enough)
+            const coords = route.coordinates;
+            const startPoint = coords[0];
+            const endPoint = coords[coords.length - 1];
+            const isLoop = Math.abs(startPoint[0] - endPoint[0]) < 0.0001 && 
+                          Math.abs(startPoint[1] - endPoint[1]) < 0.0001;
+            
+            if (!isLoop) {
+              console.log('Skipping non-loop route');
+              continue;
+            }
+
+            // More lenient distance matching for initial routes
+            const tolerance = Math.max(1, adjustedDistance * 0.5); // 50% tolerance or 1km
+            if (Math.abs(route.distance - adjustedDistance) <= tolerance) {
+              validRoutes.push({
+                ...route,
+                id: `route-${validRoutes.length + 1}`,
+                name: pattern.name,
+                pattern: pattern.name
+              });
+
+              if (validRoutes.length >= 3) {
+                break;
+              }
             }
           }
         } catch (error) {
@@ -95,22 +126,23 @@ export async function POST(request) {
         }
       }
 
-      if (allRoutes.length === 0) {
-        throw new Error('Could not generate valid routes. Try a shorter distance or different location.');
+      if (validRoutes.length > 0) {
+        // Sort routes by how close they are to the desired distance
+        validRoutes.sort((a, b) => 
+          Math.abs(a.distance - adjustedDistance) - Math.abs(b.distance - adjustedDistance)
+        );
+
+        return NextResponse.json(validRoutes.slice(0, 3));
       }
 
-      allRoutes.sort((a, b) => 
-        Math.abs(a.distance - adjustedDistance) - Math.abs(b.distance - adjustedDistance)
-      );
-
-      return NextResponse.json(allRoutes.slice(0, 3));
+      throw new Error('Could not find suitable routes. Try a different location or shorter distance.');
     }
 
     throw new Error('Invalid service specified');
   } catch (error) {
     console.error('API Error:', error);
     return NextResponse.json(
-      { error: error.message || 'Internal server error' },
+      { error: 'Could not generate routes. Try a different location or shorter distance.' },
       { status: 500 }
     );
   }
@@ -119,90 +151,106 @@ export async function POST(request) {
 function generateRouteVariations(startPoint, targetDistance) {
   const variations = [];
   
-  // Simpler patterns with much smaller radius factors
+  // Adjust radius factors based on target distance
+  const getRadiusFactor = (distance) => {
+    if (distance >= 10) return 0.15; // For 10km+
+    if (distance >= 5) return 0.12;  // For 5-10km
+    return 0.1;                     // For shorter distances
+  };
+
+  const radiusFactor = getRadiusFactor(targetDistance);
+  
+  // Simplified patterns for better road network compatibility
   const patterns = [
-    { points: 4, radiusFactor: 0.1, name: 'Square' },    // Simple square route
-    { points: 3, radiusFactor: 0.12, name: 'Triangle' }, // Simple triangle route
-    { points: 2, radiusFactor: 0.15, name: 'Out-and-Back' } // Simple out-and-back route
+    { 
+      points: 3, 
+      radiusFactor: radiusFactor * 1.0, 
+      name: 'Triangle',
+      angles: [0, 120, 240]
+    },
+    { 
+      points: 4, 
+      radiusFactor: radiusFactor * 0.9, 
+      name: 'Loop',
+      angles: [0, 90, 180, 270]
+    }
   ];
 
+  // Try different rotations for each pattern
+  const rotations = [0, 45, 90, 135];
+
   for (const pattern of patterns) {
-    const waypoints = [];
-    const angles = Array.from({ length: pattern.points }, (_, i) => (360 / pattern.points) * i);
-    
-    // Calculate a smaller radius based on the target distance
-    const radiusKm = Math.min(targetDistance * pattern.radiusFactor, 0.5); // Cap at 500m radius
-
-    // Convert km to degrees (approximate)
-    const latKmPerDegree = 111; // roughly constant
-    const lngKmPerDegree = 111 * Math.cos((startPoint[1] * Math.PI) / 180); // varies with latitude
-
-    // For out-and-back pattern
-    if (pattern.points === 2) {
-      // Create a simple out-and-back route
-      const angle = Math.random() * 360; // Random direction
-      const rad = (angle * Math.PI) / 180;
-      const lat = startPoint[1] + (radiusKm / latKmPerDegree) * Math.cos(rad);
-      const lng = startPoint[0] + (radiusKm / lngKmPerDegree) * Math.sin(rad);
-      waypoints.push(startPoint, [lng, lat], startPoint);
-      variations.push({ waypoints, pattern });
-      continue; // Skip the rest of the loop for out-and-back
-    }
-
-    // Generate main waypoints for other patterns
-    angles.forEach(angle => {
-      const rad = (angle * Math.PI) / 180;
-      const lat = startPoint[1] + (radiusKm / latKmPerDegree) * Math.cos(rad);
-      const lng = startPoint[0] + (radiusKm / lngKmPerDegree) * Math.sin(rad);
-      waypoints.push([lng, lat]);
-    });
-
-    // Add start/end point and intermediate points
-    const smoothedWaypoints = [startPoint];
-    
-    for (let i = 0; i < waypoints.length; i++) {
-      smoothedWaypoints.push(waypoints[i]);
+    for (const baseRotation of rotations) {
+      const waypoints = [];
       
-      // Add an intermediate point to the next waypoint
-      if (i < waypoints.length - 1) {
-        const next = waypoints[(i + 1) % waypoints.length];
-        const intermediateLng = (waypoints[i][0] + next[0]) / 2;
-        const intermediateLat = (waypoints[i][1] + next[1]) / 2;
-        smoothedWaypoints.push([intermediateLng, intermediateLat]);
-      }
+      // Calculate radius based on target distance
+      const radiusKm = targetDistance * pattern.radiusFactor;
+
+      // Convert km to degrees (approximate)
+      const latKmPerDegree = 111;
+      const lngKmPerDegree = 111 * Math.cos((startPoint[1] * Math.PI) / 180);
+
+      // Generate waypoints with current rotation
+      pattern.angles.forEach(angle => {
+        const rotatedAngle = (angle + baseRotation) % 360;
+        const rad = (rotatedAngle * Math.PI) / 180;
+        
+        // Calculate point with slight random variation for better road snapping
+        const variation = (Math.random() - 0.5) * 0.02; // Small random adjustment
+        const lat = startPoint[1] + (radiusKm / latKmPerDegree) * Math.cos(rad) + variation;
+        const lng = startPoint[0] + (radiusKm / lngKmPerDegree) * Math.sin(rad) + variation;
+        
+        waypoints.push([lng, lat]);
+      });
+
+      // Add start/end point
+      const routeWaypoints = [startPoint, ...waypoints, startPoint];
+      
+      // Add the route with direction name
+      const directionName = getDirectionName(baseRotation);
+      variations.push({ 
+        waypoints: routeWaypoints,
+        pattern: { ...pattern, name: `${pattern.name} ${directionName}` }
+      });
     }
-
-    // Complete the loop
-    smoothedWaypoints.push(startPoint);
-    variations.push({ waypoints: smoothedWaypoints, pattern });
-
-    // Add reverse direction for non-out-and-back routes
-    const reversedWaypoints = [
-      startPoint,
-      ...smoothedWaypoints.slice(1, -1).reverse(),
-      startPoint
-    ];
-    variations.push({ 
-      waypoints: reversedWaypoints, 
-      pattern: { ...pattern, name: `${pattern.name} (Reverse)` }
-    });
   }
 
   return variations;
 }
 
-function transformRouteData(routeData, routeNumber, patternName) {
+// Helper function to get direction name
+function getDirectionName(angle) {
+  const normalizedAngle = ((angle % 360) + 360) % 360;
+  if (normalizedAngle >= 315 || normalizedAngle < 45) return "North";
+  if (normalizedAngle >= 45 && normalizedAngle < 135) return "East";
+  if (normalizedAngle >= 135 && normalizedAngle < 225) return "South";
+  return "West";
+}
+
+function transformRouteData(routeData) {
   if (!routeData.features || !routeData.features[0]) {
     throw new Error('Invalid route data received');
   }
 
-  const routes = routeData.features.map((feature, index) => {
-    const distance = feature.properties?.summary?.distance / 1000 || 0; // Convert to km
-    const elevationGain = feature.properties?.summary?.ascent || 0;
+  const routes = routeData.features.map(feature => {
+    const properties = feature.properties?.summary || {};
+    const distance = properties.distance / 1000 || 0; // Convert to km
+    
+    // Calculate elevation gain from the elevation data
+    let elevationGain = 0;
+    if (feature.geometry?.coordinates) {
+      const coordinates = feature.geometry.coordinates;
+      for (let i = 1; i < coordinates.length; i++) {
+        const prevElevation = coordinates[i - 1][2] || 0;
+        const currentElevation = coordinates[i][2] || 0;
+        const gain = currentElevation - prevElevation;
+        if (gain > 0) {
+          elevationGain += gain;
+        }
+      }
+    }
 
     return {
-      id: `route-${routeNumber}`,
-      name: `${patternName} Route`,
       coordinates: feature.geometry.coordinates,
       distance,
       elevationGain: Math.round(elevationGain),
