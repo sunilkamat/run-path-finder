@@ -1,17 +1,20 @@
 # Run Path Finder
 
-A web application that helps runners find and plan their running routes. The app generates circular routes based on a starting location and desired distance, with options for elevation preferences.
+A web application that helps runners find and plan their running routes. The app generates loop routes based on a starting location and desired distance, optimizing for walkable paths and green areas.
 
 ## Features
 
-- Generate running routes based on start location and distance
-- Choose between kilometers and miles
-- Option to prefer flatter routes
+- Generate loop running routes based on start location and distance
+- Multiple route patterns (Triangle and Loop) with different orientations
 - View route details including distance and elevation gain
-- Export routes as GPX files for use in other apps
-- Save favorite routes for future reference
-- Interactive map display
+- Interactive map display with route visualization
+- Location search using OpenStreetMap data
+- Routes optimized for:
+  - Green areas (parks, trails)
+  - Quiet paths
+  - Walkable terrain (avoiding steps)
 - Multiple route suggestions for each search
+- Real-time route preview
 
 ## Prerequisites
 
@@ -34,7 +37,7 @@ A web application that helps runners find and plan their running routes. The app
 
 3. Create a `.env.local` file in the root directory with your OpenRouteService API key:
    ```
-   NEXT_PUBLIC_ORS_API_KEY=your_api_key_here
+   OPENROUTE_API_KEY=your_api_key_here
    ```
    Get your API key from [OpenRouteService](https://openrouteservice.org/)
 
@@ -47,13 +50,32 @@ A web application that helps runners find and plan their running routes. The app
 
 ## Technologies Used
 
-- Next.js 14
+- Next.js 14 (App Router)
 - React
 - JavaScript
 - Tailwind CSS
 - Leaflet for maps
 - OpenRouteService API for route generation
-- OpenStreetMap for location search
+- OpenStreetMap (Nominatim) for location search
+
+## Route Generation
+
+The application generates routes using the following strategies:
+- Triangle patterns (3 points) for simple loops
+- Square patterns (4 points) for more varied routes
+- Multiple rotations (0°, 45°, 90°, 135°) for better path options
+- Routes are optimized for:
+  - Distance accuracy (within 50% of target)
+  - Green areas and quiet paths
+  - Proper loop closure
+  - Elevation distribution
+
+## Known Limitations
+
+- Route generation may be less reliable in areas with limited road/path coverage
+- Some locations may require shorter distances for successful route generation
+- Maximum route distance is capped at 30km
+- Route generation success depends on OpenRouteService API availability
 
 ## License
 
