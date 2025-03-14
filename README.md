@@ -9,6 +9,7 @@ A web application that helps runners find and plan their running routes. The app
 - View route details including distance and elevation gain
 - Interactive map display with route visualization
 - Location search using OpenStreetMap data
+- Export routes as GPX files for use in GPS devices and fitness apps
 - Routes optimized for:
   - Green areas (parks, trails)
   - Quiet paths
@@ -69,6 +70,19 @@ The application generates routes using the following strategies:
   - Green areas and quiet paths
   - Proper loop closure
   - Elevation distribution
+
+## GPX Export
+
+The application supports exporting routes in GPX format, which is widely used for sharing GPS tracking data. Each generated route can be exported as a GPX file containing:
+- Route track points with precise latitude and longitude
+- Elevation data for each point
+- Route metadata and identification
+- Standard GPX 1.1 format compatible with most GPS devices and fitness apps
+
+To export a route:
+1. Generate routes by selecting a location and distance
+2. Click the "Export GPX" button on any route card
+3. The GPX file will be automatically downloaded and can be imported into your preferred GPS device or fitness app
 
 ## Known Limitations
 

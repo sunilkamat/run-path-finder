@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import RunningForm from './components/RunningForm';
 import dynamic from 'next/dynamic';
+import { downloadGPX } from './utils/gpxGenerator';
 
 // Dynamically import the map component with no SSR
 const Map = dynamic(() => import('./components/Map'), {
@@ -46,6 +47,15 @@ export default function Home() {
                         <p>Distance: {route.distance.toFixed(2)} km</p>
                         <p>Elevation Gain: {route.elevationGain}m</p>
                       </div>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          downloadGPX(route);
+                        }}
+                        className="mt-2 text-sm px-3 py-1 bg-green-600 hover:bg-green-700 text-white rounded-md transition-colors duration-200"
+                      >
+                        Export GPX
+                      </button>
                     </div>
                   ))}
                 </div>
