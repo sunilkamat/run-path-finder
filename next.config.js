@@ -5,6 +5,9 @@ const nextConfig = {
   assetPrefix: '/run',
   output: 'standalone',
   trailingSlash: true,
+  env: {
+    OPENROUTE_API_KEY: process.env.OPENROUTE_API_KEY,
+  },
 };
 
 module.exports = nextConfig; 
