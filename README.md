@@ -48,7 +48,7 @@ A web application that helps runners find and plan their running routes. The app
    npm run dev
    ```
 
-5. Open [http://localhost:3000](http://localhost:3000) in your browser
+5. Open [http://localhost:3000/run](http://localhost:3000/run) in your browser
 
 ## Deployment
 
@@ -59,14 +59,27 @@ To deploy the application using AWS Amplify:
    npm install aws-amplify @aws-amplify/adapter-nextjs
    ```
 
-2. Go to the [AWS Amplify Console](https://console.aws.amazon.com/amplify/home)
+2. Configure Next.js for sub-folder deployment (if deploying to a path like yourdomain.com/run):
+   ```js
+   // next.config.js
+   const nextConfig = {
+     reactStrictMode: true,
+     basePath: '/run',
+     assetPrefix: '/run',
+   };
 
-3. Click "New app" → "Host web app"
+   module.exports = nextConfig;
+   ```
 
-4. Choose "GitHub" as your repository source and connect your repository
+3. Go to the [AWS Amplify Console](https://console.aws.amazon.com/amplify/home)
 
-5. Configure the build settings:
-   - Build Settings:
+4. Click "New app" → "Host web app"
+
+5. Choose "GitHub" as your repository source and connect your repository
+
+6. Configure the build settings:
+   - Go to App settings → Build settings
+   - Edit the build configuration to match:
      ```yaml
      version: 1
      frontend:
@@ -81,20 +94,76 @@ To deploy the application using AWS Amplify:
          baseDirectory: .next
          files:
            - '**/*'
+         discard-paths: no
        cache:
          paths:
            - node_modules/**/*
+           - .next/cache/**/*
      ```
 
-6. Add environment variables in the Amplify Console:
+7. Add environment variables in the Amplify Console:
    - Go to App settings → Environment variables
    - Add `OPENROUTE_API_KEY` with your API key value
    - Save and deploy
 
-7. After deployment, you can:
-   - Set up a custom domain in the Amplify Console
-   - Or create a CNAME record in your domain's DNS settings pointing to the Amplify app URL
-   - Or add a redirect from your personal website to the Amplify app URL
+8. Configure the rewrite rules in Amplify:
+   - Go to Rewrites and redirects in your app settings
+   - Add these rules in order (order is important):
+     ```
+     Source address: /run
+     Target address: /run/
+     Type: 301 (Redirect)
+     ```
+     ```
+     Source address: /run/<*>
+     Target address: /run/<*>
+     Type: 200 (Rewrite)
+     ```
+     ```
+     Source address: /<*>
+     Target address: /run/<*>
+     Type: 302 (Redirect)
+     ```
+   Note: The first rule ensures proper trailing slash handling, which is required for Next.js routing
+
+### Website Integration
+
+For sub-folder deployment (yourdomain.com/run):
+
+1. In Cloudflare Dashboard:
+   - Go to Workers & Pages
+   - Click "Create Worker"
+   - Add this Worker code:
+     ```js
+     addEventListener('fetch', event => {
+       event.respondWith(handleRequest(event.request))
+     })
+     
+     async function handleRequest(request) {
+       const url = new URL(request.url)
+       
+       if (url.pathname.startsWith('/run')) {
+         const newUrl = new URL(url.pathname, 'https://xxx.amplifyapp.com')
+         
+         return fetch(newUrl.toString(), {
+           method: request.method,
+           headers: request.headers,
+           body: request.body
+         })
+       }
+       
+       return fetch(request)
+     }
+     ```
+     (Replace xxx.amplifyapp.com with your Amplify app URL)
+
+2. Set up the Worker Route:
+   - Go to Workers Routes
+   - Add a new route:
+     ```
+     Route pattern: yourdomain.com/run*
+     Worker: (select your worker)
+     ```
 
 The app will be automatically deployed whenever you push changes to your repository.
 
@@ -113,7 +182,7 @@ The app will be automatically deployed whenever you push changes to your reposit
 
 The application generates routes using the following strategies:
 - Triangle patterns (3 points) for simple loops
-- Square patterns (4 points) for more varied routes
+- Loop patterns (4 points) for more varied routes
 - Multiple rotations (0°, 45°, 90°, 135°) for better path options
 - Routes are optimized for:
   - Distance accuracy (within 50% of target)
