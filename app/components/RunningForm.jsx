@@ -20,7 +20,7 @@ export default function RunningForm({ onRoutesGenerated }) {
     setError('');
 
     try {
-      const response = await fetch('/run/api', {
+      const response = await fetch('/run/api/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -61,7 +61,7 @@ export default function RunningForm({ onRoutesGenerated }) {
 
     setError('');
     try {
-      const response = await fetch('/run/api', {
+      const response = await fetch('/run/api/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
