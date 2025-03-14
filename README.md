@@ -22,6 +22,7 @@ A web application that helps runners find and plan their running routes. The app
 - Node.js 18 or higher
 - npm or yarn
 - OpenRouteService API key (free tier available)
+- AWS account (for deployment)
 
 ## Setup
 
@@ -49,6 +50,54 @@ A web application that helps runners find and plan their running routes. The app
 
 5. Open [http://localhost:3000](http://localhost:3000) in your browser
 
+## Deployment
+
+To deploy the application using AWS Amplify:
+
+1. Install AWS Amplify dependencies:
+   ```bash
+   npm install aws-amplify @aws-amplify/adapter-nextjs
+   ```
+
+2. Go to the [AWS Amplify Console](https://console.aws.amazon.com/amplify/home)
+
+3. Click "New app" → "Host web app"
+
+4. Choose "GitHub" as your repository source and connect your repository
+
+5. Configure the build settings:
+   - Build Settings:
+     ```yaml
+     version: 1
+     frontend:
+       phases:
+         preBuild:
+           commands:
+             - npm ci
+         build:
+           commands:
+             - npm run build
+       artifacts:
+         baseDirectory: .next
+         files:
+           - '**/*'
+       cache:
+         paths:
+           - node_modules/**/*
+     ```
+
+6. Add environment variables in the Amplify Console:
+   - Go to App settings → Environment variables
+   - Add `OPENROUTE_API_KEY` with your API key value
+   - Save and deploy
+
+7. After deployment, you can:
+   - Set up a custom domain in the Amplify Console
+   - Or create a CNAME record in your domain's DNS settings pointing to the Amplify app URL
+   - Or add a redirect from your personal website to the Amplify app URL
+
+The app will be automatically deployed whenever you push changes to your repository.
+
 ## Technologies Used
 
 - Next.js 14 (App Router)
@@ -58,6 +107,7 @@ A web application that helps runners find and plan their running routes. The app
 - Leaflet for maps
 - OpenRouteService API for route generation
 - OpenStreetMap (Nominatim) for location search
+- AWS Amplify for deployment
 
 ## Route Generation
 

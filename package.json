@@ -9,7 +9,9 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@aws-amplify/adapter-nextjs": "^1.5.5",
     "@turf/turf": "7.2.0",
+    "aws-amplify": "^6.13.5",
     "axios": "1.6.7",
     "leaflet": "1.9.4",
     "next": "14.1.0",
