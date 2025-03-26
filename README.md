@@ -2,6 +2,10 @@
 
 A web application that helps runners find and plan their running routes. The app generates loop routes based on a starting location and desired distance, optimizing for walkable paths and green areas.
 
+## Note
+
+This application was generated entirely using Cursor AI Code Editor.
+
 ## Features
 
 - Generate loop running routes based on start location and distance
